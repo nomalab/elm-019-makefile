@@ -26,7 +26,7 @@ $(debugElmDist): $(sourceElm) $(allElm)
 	./bin/elm make $< --output=$@
 
 $(optimizedElmDist): $(debugElmDist)
-	$(call stl, $*, "Optimilzing")
+	$(call stl, $*, "Optimizing")
 	./bin/elm make src/$*.elm --optimize --output=$@
 
 $(debugDist): $(debugElmDist) $(browserifyDist)
