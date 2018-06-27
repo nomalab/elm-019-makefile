@@ -1,21 +1,21 @@
 # Makefile
 
+> provided **elm binaries** are for **Linux**, until release.
+
 ```
 make
 
-make help           
+make help
 
   Build the front
 
- > prod    : build files for prod
+
+ > dist    : build files for production
  > debug   : build files for debug
- > bundle  : bundle with browserify
 
  > clean   : remove temporary files
  > watch   : watch & compile files
- > install : install dependencies
+ > deps    : install dependencies
  > help    : this
 
 ```
-
-provided elm binaries are for Linux, until release.
