@@ -46,7 +46,7 @@ $(productionDist): $(optimizedElmDist) $(browserifyDist)
 ## Commands
 ##
 
-all: install debug prod
+all: install prod
 
 prod: dist/Private.min.js dist/Public.min.js
 
@@ -85,7 +85,19 @@ help:
 
 npmBinDeps := browserify livereload
 
+$(npmBinDeps):
+	@ make -s installIfNot cmd=$@ npm=$@
+
+# uglifyjs & chokidar have different npm id and command
+uglifyjs:
+	@ make -s installIfNot cmd=uglifyjs npm=uglify-js
+
+chokidar:
+	@ make -s installIfNot cmd=chokidar npm=chokidar-cli
+
+# This Makefile requires some bins
 install: $(npmBinDeps) uglifyjs chokidar
+	# Also, if package-lock is older than package, we update npm
 	@ if [ package-lock.json -ot package.json ]; then npm i; fi
 	$(call success, "All dependencies fetched")
 
@@ -94,18 +106,6 @@ ifeq ($(shell command -v $(cmd) 2>&1 /dev/null),)
 	$(call stl, $(npm), "Installing")
 	@ npm i -D $(npm)
 endif
-
-$(npmBinDeps):
-	@ make -s installIfNot cmd=$@ npm=$@
-
-# uglifyjs & chokidar have different npm id and command
-
-uglifyjs:
-	@ make -s installIfNot cmd=uglifyjs npm=uglify-js
-
-chokidar:
-	@ make -s installIfNot cmd=chokidar npm=chokidar-cli
-
 
 
 ##
