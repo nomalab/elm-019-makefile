@@ -1,7 +1,7 @@
 PATH  := node_modules/.bin:$(PATH)
 SHELL := /bin/bash
 .DEFAULT_GOAL := all
-.PHONY: all clean install help installIfNot
+.PHONY: all clean deps help installIfNot
 
 ##
 ## Sources
@@ -46,15 +46,11 @@ $(productionDist): $(optimizedElmDist) $(browserifyDist)
 ## Commands
 ##
 
-all: clean install prod
+all: clean deps dist
 
-prod: dist/Private.min.js dist/Public.min.js
+dist: dist/Private.min.js dist/Public.min.js
 
 debug: dist/Private.js dist/Public.js
-
-bundle: dist/Private.bdl.js dist/Public.bdl.js
-
-makeElm: dist/Private.elm.js dist/Public.elm.js
 
 watch:
 	$(call action, "Watching...")
@@ -79,7 +75,7 @@ chokidar:
 	@ make -s installIfNot cmd=chokidar npm=chokidar-cli
 
 # This Makefile requires some bins
-install: $(npmBinDeps) uglifyjs chokidar
+deps: $(npmBinDeps) uglifyjs chokidar
 	# Also, if package-lock is older than package, we update npm
 	@ if [ package-lock.json -ot package.json ]; then npm i; fi
 	$(call success, "All dependencies fetched")
@@ -94,6 +90,10 @@ clean:
 	@ rm -rf dist elm-stuff node_modules
 	$(call success, "Cleaned")
 
+distclean:
+	@ rm -rf dist
+	$(call success, "Cleaned dist")
+
 
 ##
 ## Help & Formatting
@@ -101,13 +101,12 @@ clean:
 
 help:
 	$(call success, "Build the front")
-	$(call help, "prod   ","build files for prod")
+	$(call help, "dist   ","build files for production")
 	$(call help, "debug  ","build files for debug")
-	$(call help, "bundle ","bundle with browserify")
 	@ echo ""
 	$(call help, "clean  ","remove temporary files")
 	$(call help, "watch  ","watch & compile files")
-	$(call help, "install","install dependencies")
+	$(call help, "deps   ","install dependencies")
 	$(call help, "help   ","this")
 	@ echo ""
 	@ echo ""
