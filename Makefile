@@ -52,7 +52,7 @@ prod: dist/Private.min.js dist/Public.min.js
 
 debug: dist/Private.js dist/Public.js
 
-blundle: dist/Private.bdl.js dist/Public.bdl.js
+bundle: dist/Private.bdl.js dist/Public.bdl.js
 
 makeElm: dist/Private.elm.js dist/Public.elm.js
 
