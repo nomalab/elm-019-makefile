@@ -1,22 +1,21 @@
 PATH  := node_modules/.bin:$(PATH)
 SHELL := /bin/bash
-
-# TODO: when release, use npm's elm
+.DEFAULT_GOAL := all
+.PHONY: all clean install help installIfNot
 
 ##
 ## Sources
 ##
 
-sourceElm       := src/%.elm
-allElm          := src/*.elm
-sourceJs        := src/%.js
-allJs           := src/*.js
-debugElmDist    := dist/%.elm.js
-browserifyDist  := dist/%.bdl.js
-debugDist       := dist/%.js
-minifiedElmDist := dist/%.elm.min.js
-productionDist  := dist/%.min.js
-npmBinDeps      := elm browserify livereload uglify-js chokidar
+sourceElm        := src/%.elm
+sourceJs         := src/%.js
+allElm           := src/*.elm
+allJs            := src/*.js
+debugDist        := dist/%.js
+debugElmDist     := dist/%.elm.js
+browserifyDist   := dist/%.bdl.js
+productionDist   := dist/%.min.js
+optimizedElmDist := dist/%.elm.min.js
 
 ##
 ## Files dependencies & build
@@ -26,7 +25,7 @@ $(debugElmDist): $(sourceElm) $(allElm)
 	$(call stl, $*, "Compiling")
 	./bin/elm make $< --output=$@
 
-$(minifiedElmDist): $(debugElmDist)
+$(optimizedElmDist): $(debugElmDist)
 	$(call stl, $*, "Optimilzing")
 	./bin/elm make src/$*.elm --optimize --output=$@
 
@@ -38,7 +37,7 @@ $(browserifyDist): $(sourceJs) $(allJs)
 	$(call stl, $*, "Bundling")
 	browserify $< -o $@
 
-$(productionDist): $(minifiedElmDist) $(browserifyDist)
+$(productionDist): $(optimizedElmDist) $(browserifyDist)
 	$(call stl, $*, "Minifying")
 	uglifyjs $^ -cm -o $@
 
@@ -66,16 +65,6 @@ clean:
 	@ rm -rf dist elm-stuff
 	$(call success, "Cleaned")
 
-ifeq ($(wildcard package.json),) 
-install: $(npmDependencies)
-else
-install:
-	$(call stl, $@, "Installing:")
-	@ npm i
-	@ rm -f $(bundle)
-	@ make -s $(bundle)
-endif
-
 help:
 	$(call success, "Build the front")
 	$(call help, "prod   ","build files for prod")
@@ -94,11 +83,29 @@ help:
 ## Npm dependencies
 ##
 
-chokidar:
-	npm i chokidar-cli
+npmBinDeps := browserify livereload
 
-$(npmDependencies):
-	npm i $@
+install: $(npmBinDeps) uglifyjs chokidar
+	@ if [ package-lock.json -ot package.json ]; then npm i; fi
+	$(call success, "All dependencies fetched")
+
+installIfNot:
+ifeq ($(shell command -v $(cmd) 2>&1 /dev/null),)
+	$(call stl, $(npm), "Installing")
+	@ npm i -D $(npm)
+endif
+
+$(npmBinDeps):
+	@ make -s installIfNot cmd=$@ npm=$@
+
+# uglifyjs & chokidar have different npm id and command
+
+uglifyjs:
+	@ make -s installIfNot cmd=uglifyjs npm=uglify-js
+
+chokidar:
+	@ make -s installIfNot cmd=chokidar npm=chokidar-cli
+
 
 
 ##
@@ -152,4 +159,3 @@ define help
 	@ echo -n $2
 endef
 
-.PHONY: all clean install help $(npmDependencies)
