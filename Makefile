@@ -46,7 +46,7 @@ $(productionDist): $(optimizedElmDist) $(browserifyDist)
 ## Commands
 ##
 
-all: install prod
+all: clean install prod
 
 prod: dist/Private.min.js dist/Public.min.js
 
@@ -59,24 +59,7 @@ makeElm: dist/Private.elm.js dist/Public.elm.js
 watch:
 	$(call action, "Watching...")
 	@ livereload dist/ \
-		& chokidar 'src/**.elm' --initial -c 'make debug'
-
-clean:
-	@ rm -rf dist elm-stuff
-	$(call success, "Cleaned")
-
-help:
-	$(call success, "Build the front")
-	$(call help, "prod   ","build files for prod")
-	$(call help, "debug  ","build files for debug")
-	$(call help, "bundle ","bundle with browserify")
-	@ echo ""
-	$(call help, "clean  ","remove temporary files")
-	$(call help, "watch  ","watch & compile files")
-	$(call help, "install","install dependencies")
-	$(call help, "help   ","this")
-	@ echo ""
-	@ echo ""
+		& chokidar 'src/**.elm' --initial -c 'make -s debug'
 
 
 ##
@@ -107,10 +90,27 @@ ifeq ($(shell command -v $(cmd) 2>&1 /dev/null),)
 	@ npm i -D $(npm)
 endif
 
+clean:
+	@ rm -rf dist elm-stuff node_modules
+	$(call success, "Cleaned")
+
 
 ##
-## Format text
+## Help & Formatting
 ##
+
+help:
+	$(call success, "Build the front")
+	$(call help, "prod   ","build files for prod")
+	$(call help, "debug  ","build files for debug")
+	$(call help, "bundle ","bundle with browserify")
+	@ echo ""
+	$(call help, "clean  ","remove temporary files")
+	$(call help, "watch  ","watch & compile files")
+	$(call help, "install","install dependencies")
+	$(call help, "help   ","this")
+	@ echo ""
+	@ echo ""
 
 define stl
 	@ echo ""
