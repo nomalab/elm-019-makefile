@@ -3,44 +3,9 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := all
 .PHONY: all clean deps help installIfNot
 
-##
-## Sources
-##
-
-sourceElm        := src/%.elm
-sourceJs         := src/%.js
-allElm           := src/*.elm
-allJs            := src/*.js
-debugDist        := dist/%.js
-debugElmDist     := dist/%.elm.js
-browserifyDist   := dist/%.bdl.js
-productionDist   := dist/%.min.js
-optimizedElmDist := dist/%.elm.min.js
-
-##
-## Files dependencies & build
-##
-
-$(debugElmDist): $(sourceElm) $(allElm)
-	$(call stl, $*, "Compiling")
-	./bin/elm make $< --output=$@
-
-$(optimizedElmDist): $(debugElmDist)
-	$(call stl, $*, "Optimizing")
-	./bin/elm make src/$*.elm --optimize --output=$@
-
-$(debugDist): $(debugElmDist) $(browserifyDist)
-	$(call stl, $*, "Concatenating")
-	cat $^ > $@
-
-$(browserifyDist): $(sourceJs) $(allJs)
-	$(call stl, $*, "Bundling")
-	browserify $< -o $@
-
-$(productionDist): $(optimizedElmDist) $(browserifyDist)
-	$(call stl, $*, "Minifying")
-	uglifyjs $^ -cm -o $@
-
+# Arguments
+mode  := prod
+quiet := false
 
 ##
 ## Commands
@@ -48,51 +13,67 @@ $(productionDist): $(optimizedElmDist) $(browserifyDist)
 
 all: clean deps dist
 
-dist: dist/Private.min.js dist/Public.min.js
-
-debug: dist/Private.js dist/Public.js
+dist: dist/Private.js dist/Public.js
+	$(call action, "DONE")
 
 watch:
-	$(call action, "Watching...")
+	$(call action, "Watching")
 	@ livereload dist/ \
-		& chokidar 'src/**.elm' --initial -c 'make -s debug'
+		& chokidar 'src/**' --initial --silent \
+			-c 'make -s dist mode=dev'
 
-
-##
-## Npm dependencies
-##
-
-npmBinDeps := browserify livereload
-
-$(npmBinDeps):
-	@ make -s installIfNot cmd=$@ npm=$@
-
-# uglifyjs & chokidar have different npm id and command
-uglifyjs:
-	@ make -s installIfNot cmd=uglifyjs npm=uglify-js
-
-chokidar:
-	@ make -s installIfNot cmd=chokidar npm=chokidar-cli
-
-# This Makefile requires some bins
-deps: $(npmBinDeps) uglifyjs chokidar
-	# Also, if package-lock is older than package, we update npm
-	@ if [ package-lock.json -ot package.json ]; then npm i; fi
-	$(call success, "All dependencies fetched")
-
-installIfNot:
-ifeq ($(shell command -v $(cmd) 2>&1 /dev/null),)
-	$(call stl, $(npm), "Installing")
-	@ npm i -D $(npm)
+ifeq ($(mode), dev)
+cache: dist/Private.bundle.js dist/Private.elm.js dist/Public.bundle.js dist/Public.elm.js
 endif
 
 clean:
 	@ rm -rf dist elm-stuff node_modules
-	$(call success, "Cleaned")
+	$(call action, "Cleaned")
 
 distclean:
 	@ rm -rf dist
-	$(call success, "Cleaned dist")
+	$(call action, "Cleaned dist")
+
+deps:
+	$(call action, "Installing...")
+	@ npm i
+
+##
+## Sources
+##
+
+elmSource     := src/%.elm
+allElmSources := src/*.elm
+jsSource      := src/%.js
+allJsSources  := src/*.js
+mainFile      := dist/%.js
+elmOutput     := dist/%.elm.js
+bundle        := dist/%.bundle.js
+debug         := dist/%.html
+
+##
+## Files dependencies & build
+##
+
+$(mainFile): $(elmOutput) $(bundle)
+	$(call stl, $*, "Concatenating")
+ifeq ($(mode), prod)
+	@ uglifyjs $^ -mc 'pure_funcs="F2,F3,F4,F5,F6,F7,F8,F9"' -o $@
+else
+	@ cat $^ > $@
+endif
+
+$(elmOutput): $(elmSource) $(allElmSources)
+	$(call stl, $*, "Compiling")
+ifeq ($(mode), prod)
+	@ ./bin/elm make $< --optimize --output=$@
+else
+	@ ./bin/elm make $< --output=$@
+endif
+
+$(bundle): $(jsSource) $(allJsSources)
+	$(call stl, $*, "Bundling")
+	@ browserify $< -o $@
 
 
 ##
@@ -100,7 +81,7 @@ distclean:
 ##
 
 help:
-	$(call success, "Build the front")
+	$(call action, "Build the front")
 	$(call help, "dist   ","build files for production")
 	$(call help, "debug  ","build files for debug")
 	@ echo ""
@@ -110,40 +91,31 @@ help:
 	$(call help, "help   ","this")
 	@ echo ""
 	@ echo ""
+	@ echo " *defaults : quiet=false mode=prod"
+	@ echo ""
 
+ifneq ($(quiet), true)
 define stl
-	@ echo ""
-	@ tput setaf 3
-	@ tput bold
-	@ echo -n ":"
-	@ tput setaf 6
-	@ echo -n $2
-	@ tput setaf 3
-	@ echo -n ":"
-	@ echo -n $1
-	@ tput sgr0
-	@ echo ""
+@ echo ""
+@ tput setaf 4
+@ tput bold
+@ echo -n " :"
+@ printf "%-.10s" "$1                    "
+@ echo -n ": "
+@ tput setaf 7
+@ echo -n "$2"
+@ tput sgr0
 endef
-
-define success
-	@ echo ""
-	@ echo -n "  "
-	@ tput bold
-	@ tput setaf 2
-	@ echo -n $1
-	@ tput sgr0
-	@ echo ""
-	@ echo ""
-endef
+endif
 
 define action
 	@ echo ""
-	@ echo -n "  "
+	@ tput setaf 4
 	@ tput bold
-	@ tput setaf 6
+	@ echo -n " : "
+	@ tput setaf 7
 	@ echo -n $1
 	@ tput sgr0
-	@ echo ""
 	@ echo ""
 endef
 
@@ -157,4 +129,3 @@ define help
 	@ echo -n " : "
 	@ echo -n $2
 endef
-
